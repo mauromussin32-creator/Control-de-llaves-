@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Control de Llaves</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f3f5f4;margin:0;color:#172026}header{background:#0b6b43;color:#fff;padding:18px;text-align:center}main{max-width:700px;margin:auto;padding:16px}.card{background:#fff;border-radius:14px;padding:18px;margin:14px 0;box-shadow:0 2px 10px #0001}button,select{font-size:17px;padding:13px;border-radius:10px;border:1px solid #ccc;width:100%;margin-top:10px}button{background:#0b6b43;color:#fff;border:0;font-weight:bold}.danger{background:#b42318}.secondary{background:#e7f1ec;color:#075c39}.small{font-size:13px;color:#667085}.hidden{display:none}.status{padding:7px 10px;border-radius:20px;font-weight:bold;display:inline-block}.ok{background:#dcfae6;color:#067647}.out{background:#fee4e2;color:#b42318}table{width:100%;border-collapse:collapse;margin-top:10px}td,th{padding:9px;border-bottom:1px solid #ddd;text-align:left;font-size:14px}</style>
+</head>
+<body>
+<header><h1>🔑 CONTROL DE LLAVES</h1><div>Versión de prueba · 4 llaves</div></header>
+<main>
+<div id="login" class="card"><h2>👤 Identificar empleado</h2><p class="small">Seleccioná quién está usando el sistema.</p><select id="employee"><option>Juan Pérez</option><option>Pedro Gómez</option><option>María López</option><option>Carlos González</option></select><button onclick="enter()">INGRESAR</button></div>
+<div id="app" class="hidden">
+<div class="card"><h2>Hola, <span id="user"></span> 👋</h2><p class="small">Seleccioná una llave para simular el escaneo de su QR.</p><select id="keySelect"></select><button onclick="scan()">📷 ESCANEAR QR DE LA LLAVE</button></div>
+<div id="keyCard" class="card hidden"></div>
+<div class="card"><h2>📋 Estado actual</h2><table><thead><tr><th>Llave</th><th>Estado</th><th>Responsable</th></tr></thead><tbody id="state"></tbody></table></div>
+<div class="card"><h2>📚 Historial</h2><div id="history">Todavía no hay movimientos.</div></div>
+</div></main>
+<script>
+const initial=[{id:1,name:'PUERTA VIRGEN'},{id:2,name:'OFICINA VENTAS'},{id:3,name:'LLAVE CAJA FUERTE'},{id:4,name:'COMEDOR ZONA LIMPIA'}];
+let data=JSON.parse(localStorage.getItem('llavesPrueba')||'null')||initial.map(k=>({...k,status:'available',responsible:null,retiredAt:null}));
+let history=JSON.parse(localStorage.getItem('historialLlaves')||'[]');let currentUser='';
+function save(){localStorage.setItem('llavesPrueba',JSON.stringify(data));localStorage.setItem('historialLlaves',JSON.stringify(history))}
+function now(){return new Date().toLocaleString('es-AR',{dateStyle:'short',timeStyle:'short'})}
+function enter(){currentUser=document.getElementById('employee').value;document.getElementById('user').textContent=currentUser;document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');document.getElementById('keySelect').innerHTML=data.map(k=>`<option value="${k.id}">LLAVE ${String(k.id).padStart(3,'0')} — ${k.name}</option>`).join('');render()}
+function scan(){const k=data.find(x=>x.id==document.getElementById('keySelect').value),card=document.getElementById('keyCard');card.classList.remove('hidden');if(k.status==='available'){card.innerHTML=`<h2>🔑 LLAVE ${String(k.id).padStart(3,'0')}</h2><h3>${k.name}</h3><span class="status ok">🟢 DISPONIBLE</span><button onclick="retire(${k.id})">RETIRAR LLAVE</button>`}else{card.innerHTML=`<h2>🔑 LLAVE ${String(k.id).padStart(3,'0')}</h2><h3>${k.name}</h3><span class="status out">🔴 RETIRADA</span><p><b>Retiró:</b> ${k.responsible}<br><b>Fecha/hora:</b> ${k.retiredAt}</p><button class="danger" onclick="devolver(${k.id})">DEVOLVER LLAVE</button>`}}
+function retire(id){const k=data.find(x=>x.id===id),t=now();k.status='taken';k.responsible=currentUser;k.retiredAt=t;history.unshift({key:k.name,type:'RETIRO',retiro:currentUser,fecha:t});save();render();scan();alert('Retiro registrado. Responsable: '+currentUser)}
+function devolver(id){const k=data.find(x=>x.id===id),t=now(),original=k.responsible;k.status='available';k.responsible=null;k.retiredAt=null;history.unshift({key:k.name,type:'DEVOLUCIÓN',retiro:original,devuelve:currentUser,fecha:t});save();render();scan();alert('Devolución registrada.\nRetiró: '+original+'\nDevolvió: '+currentUser)}
+function render(){document.getElementById('state').innerHTML=data.map(k=>`<tr><td>${k.name}</td><td>${k.status==='available'?'🟢 Disponible':'🔴 Retirada'}</td><td>${k.responsible||'—'}</td></tr>`).join('');document.getElementById('history').innerHTML=history.length?history.map(x=>x.type==='RETIRO'?`<p><b>${x.key}</b><br>Retiró: ${x.retiro} · ${x.fecha}</p>`:`<p><b>${x.key}</b><br>Retiró: ${x.retiro} · Devolvió: ${x.devuelve} · ${x.fecha}</p>`).join(''):'Todavía no hay movimientos.'}
+</script></body></html>
