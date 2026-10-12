@@ -1,31 +1,249 @@
-<!doctype html>
-<html lang="es">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Control de Llaves</title>
-<style>
-body{font-family:Arial,sans-serif;background:#f3f5f4;margin:0;color:#172026}header{background:#0b6b43;color:#fff;padding:18px;text-align:center}main{max-width:700px;margin:auto;padding:16px}.card{background:#fff;border-radius:14px;padding:18px;margin:14px 0;box-shadow:0 2px 10px #0001}button,select{font-size:17px;padding:13px;border-radius:10px;border:1px solid #ccc;width:100%;margin-top:10px}button{background:#0b6b43;color:#fff;border:0;font-weight:bold}.danger{background:#b42318}.secondary{background:#e7f1ec;color:#075c39}.small{font-size:13px;color:#667085}.hidden{display:none}.status{padding:7px 10px;border-radius:20px;font-weight:bold;display:inline-block}.ok{background:#dcfae6;color:#067647}.out{background:#fee4e2;color:#b42318}table{width:100%;border-collapse:collapse;margin-top:10px}td,th{padding:9px;border-bottom:1px solid #ddd;text-align:left;font-size:14px}</style>
-</head>
-<body>
-<header><h1>🔑 CONTROL DE LLAVES</h1><div>Versión de prueba · 4 llaves</div></header>
-<main>
-<div id="login" class="card"><h2>👤 Identificar empleado</h2><p class="small">Seleccioná quién está usando el sistema.</p><select id="employee"><option>Juan Pérez</option><option>Pedro Gómez</option><option>María López</option><option>Carlos González</option></select><button onclick="enter()">INGRESAR</button></div>
-<div id="app" class="hidden">
-<div class="card"><h2>Hola, <span id="user"></span> 👋</h2><p class="small">Seleccioná una llave para simular el escaneo de su QR.</p><select id="keySelect"></select><button onclick="scan()">📷 ESCANEAR QR DE LA LLAVE</button></div>
-<div id="keyCard" class="card hidden"></div>
-<div class="card"><h2>📋 Estado actual</h2><table><thead><tr><th>Llave</th><th>Estado</th><th>Responsable</th></tr></thead><tbody id="state"></tbody></table></div>
-<div class="card"><h2>📚 Historial</h2><div id="history">Todavía no hay movimientos.</div></div>
-</div></main>
-<script>
-const initial=[{id:1,name:'PUERTA VIRGEN'},{id:2,name:'OFICINA VENTAS'},{id:3,name:'LLAVE CAJA FUERTE'},{id:4,name:'COMEDOR ZONA LIMPIA'}];
-let data=JSON.parse(localStorage.getItem('llavesPrueba')||'null')||initial.map(k=>({...k,status:'available',responsible:null,retiredAt:null}));
-let history=JSON.parse(localStorage.getItem('historialLlaves')||'[]');let currentUser='';
-function save(){localStorage.setItem('llavesPrueba',JSON.stringify(data));localStorage.setItem('historialLlaves',JSON.stringify(history))}
-function now(){return new Date().toLocaleString('es-AR',{dateStyle:'short',timeStyle:'short'})}
-function enter(){currentUser=document.getElementById('employee').value;document.getElementById('user').textContent=currentUser;document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');document.getElementById('keySelect').innerHTML=data.map(k=>`<option value="${k.id}">LLAVE ${String(k.id).padStart(3,'0')} — ${k.name}</option>`).join('');render()}
-function scan(){const k=data.find(x=>x.id==document.getElementById('keySelect').value),card=document.getElementById('keyCard');card.classList.remove('hidden');if(k.status==='available'){card.innerHTML=`<h2>🔑 LLAVE ${String(k.id).padStart(3,'0')}</h2><h3>${k.name}</h3><span class="status ok">🟢 DISPONIBLE</span><button onclick="retire(${k.id})">RETIRAR LLAVE</button>`}else{card.innerHTML=`<h2>🔑 LLAVE ${String(k.id).padStart(3,'0')}</h2><h3>${k.name}</h3><span class="status out">🔴 RETIRADA</span><p><b>Retiró:</b> ${k.responsible}<br><b>Fecha/hora:</b> ${k.retiredAt}</p><button class="danger" onclick="devolver(${k.id})">DEVOLVER LLAVE</button>`}}
-function retire(id){const k=data.find(x=>x.id===id),t=now();k.status='taken';k.responsible=currentUser;k.retiredAt=t;history.unshift({key:k.name,type:'RETIRO',retiro:currentUser,fecha:t});save();render();scan();alert('Retiro registrado. Responsable: '+currentUser)}
-function devolver(id){const k=data.find(x=>x.id===id),t=now(),original=k.responsible;k.status='available';k.responsible=null;k.retiredAt=null;history.unshift({key:k.name,type:'DEVOLUCIÓN',retiro:original,devuelve:currentUser,fecha:t});save();render();scan();alert('Devolución registrada.\nRetiró: '+original+'\nDevolvió: '+currentUser)}
-function render(){document.getElementById('state').innerHTML=data.map(k=>`<tr><td>${k.name}</td><td>${k.status==='available'?'🟢 Disponible':'🔴 Retirada'}</td><td>${k.responsible||'—'}</td></tr>`).join('');document.getElementById('history').innerHTML=history.length?history.map(x=>x.type==='RETIRO'?`<p><b>${x.key}</b><br>Retiró: ${x.retiro} · ${x.fecha}</p>`:`<p><b>${x.key}</b><br>Retiró: ${x.retiro} · Devolvió: ${x.devuelve} · ${x.fecha}</p>`).join(''):'Todavía no hay movimientos.'}
-</script></body></html>
+    <!doctype html>
+    <html lang="es">
+    <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="theme-color" content="#0b6b43">
+    <title>Control de Llaves · ENERCOP</title>
+    <style>
+    :root{--green:#0b6b43;--green-dark:#075c39;--bg:#f3f5f4;--ink:#172026;--muted:#667085;--red:#b42318;--line:#e4e7ec}
+    *{box-sizing:border-box}
+    body{font-family:Arial,sans-serif;background:var(--bg);margin:0;color:var(--ink)}
+    header{background:var(--green);color:#fff;padding:20px 16px;text-align:center}
+    header h1{font-size:clamp(25px,6vw,36px);margin:4px 0 10px}
+    header p{margin:0;font-size:16px}
+    main{max-width:760px;margin:auto;padding:14px}
+    .card{background:#fff;border-radius:16px;padding:18px;margin:14px 0;box-shadow:0 2px 10px #0001}
+    h2{font-size:23px;margin:0 0 12px}
+    p{line-height:1.45}
+    .small{font-size:14px;color:var(--muted)}
+    button,select,input{font:inherit;font-size:17px;padding:13px;border-radius:10px;border:1px solid #cfd4dc;width:100%;margin-top:10px}
+    button{background:var(--green);color:white;border:0;font-weight:bold;cursor:pointer}
+    button:disabled{opacity:.55}
+    button.secondary{background:#e7f1ec;color:var(--green-dark)}
+    button.danger{background:var(--red)}
+    button.neutral{background:#344054}
+    .hidden{display:none!important}
+    .status{padding:7px 10px;border-radius:20px;font-weight:bold;display:inline-block;font-size:14px}
+    .ok{background:#dcfae6;color:#067647}.out{background:#fee4e2;color:var(--red)}
+    .notice{padding:12px;border-radius:10px;background:#fffaeb;color:#93370d;font-size:14px;line-height:1.4}
+    .success{padding:12px;border-radius:10px;background:#ecfdf3;color:#067647;font-size:14px}
+    #reader{width:100%;overflow:hidden;border-radius:12px;margin-top:12px}
+    #reader video{border-radius:12px}
+    .actions{display:grid;grid-template-columns:1fr;gap:8px}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{padding:9px 7px;border-bottom:1px solid var(--line);text-align:left;font-size:13px;vertical-align:top}
+    th{background:#f9fafb}
+    .table-wrap{overflow-x:auto}
+    .history-item{border-bottom:1px solid var(--line);padding:10px 0;line-height:1.45}
+    .history-item:last-child{border-bottom:0}
+    .tag{display:inline-block;border-radius:6px;padding:3px 7px;background:#f2f4f7;font-size:12px;font-weight:bold}
+    footer{text-align:center;color:var(--muted);font-size:12px;padding:16px}
+    @media(min-width:520px){.actions{grid-template-columns:1fr 1fr}th,td{font-size:14px}}
+    </style>
+    </head>
+    <body>
+    <header>
+      <h1>🔑 CONTROL DE LLAVES</h1>
+      <p>ENERCOP · Control de retiros y devoluciones</p>
+    </header>
+    <main>
+      <section id="login" class="card">
+        <h2>👤 Identificar empleado</h2>
+        <p class="small">Seleccioná quién está usando el sistema.</p>
+        <select id="employee" aria-label="Empleado">
+          <option>Juan Pérez</option><option>Pedro Gómez</option><option>María López</option><option>Carlos González</option>
+        </select>
+        <button id="enterBtn">INGRESAR</button>
+        <p class="small">La lista es de prueba. Antes de usar en planta, reemplazá estos nombres por los empleados autorizados.</p>
+      </section>
+
+      <section id="app" class="hidden">
+        <section class="card">
+          <h2>Hola, <span id="user"></span> 👋</h2>
+          <p class="small">Escaneá el QR pegado en la llave. También podés elegir una llave manualmente para probar.</p>
+          <div class="actions">
+            <button id="startScan">📷 ABRIR CÁMARA Y ESCANEAR QR</button>
+            <button id="stopScan" class="neutral hidden">DETENER CÁMARA</button>
+          </div>
+          <div id="reader" class="hidden"></div>
+          <div id="scanMessage" class="small" role="status"></div>
+          <div class="notice">La cámara necesita permiso y la página debe abrirse por HTTPS. Si el navegador pregunta, elegí <b>Permitir</b>.</div>
+        </section>
+
+        <section class="card">
+          <h2>🔎 Selección manual (prueba)</h2>
+          <label for="keySelect" class="small">Elegí una llave si todavía no tenés los QR impresos.</label>
+          <select id="keySelect"></select>
+          <button id="manualSelect" class="secondary">VER LLAVE SELECCIONADA</button>
+        </section>
+
+        <section id="keyCard" class="card hidden"></section>
+
+        <section class="card">
+          <h2>📋 Estado actual</h2>
+          <div class="table-wrap"><table><thead><tr><th>Código</th><th>Llave</th><th>Estado</th><th>Responsable actual</th></tr></thead><tbody id="state"></tbody></table></div>
+        </section>
+
+        <section class="card">
+          <h2>📚 Historial de movimientos</h2>
+          <p class="small">Los movimientos se muestran del más reciente al más antiguo.</p>
+          <div id="history">Todavía no hay movimientos.</div>
+          <button id="exportCsv" class="secondary">⬇️ EXPORTAR HISTORIAL CSV</button>
+        </section>
+
+        <section class="card">
+          <h2>👤 Cambiar empleado</h2>
+          <button id="changeUser" class="neutral">VOLVER A IDENTIFICARME</button>
+        </section>
+      </section>
+    </main>
+    <footer>Control de Llaves · Prototipo de prueba</footer>
+
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script>
+    'use strict';
+    const initial=[
+    {id:1,name:'PUERTA VIRGEN'},
+    {id:2,name:'OFICINA VENTAS'},
+    {id:3,name:'LLAVE CAJA FUERTE'},
+    {id:4,name:'COMEDOR ZONA LIMPIA'},
+    {id:5,name:'OFICINA SENASA'},
+    {id:6,name:'MOLINO'},
+    {id:7,name:'DEPOSITO LIMPIEZA'},
+    {id:8,name:'OFICINA PRODUCCIÓN'},
+    {id:9,name:'DEPOSITO INSUMOS'},
+    {id:10,name:'DEPOSITO PLAGAS (M.I.P.)'},
+    {id:11,name:'OFICINA CALIDAD'},
+    {id:12,name:'COMEDOR ZONA SUCIA'},
+    {id:13,name:'CONSULTORIO MEDICO'},
+    {id:14,name:'VESTUARIO ZONA LIMPIA'},
+    {id:15,name:'OFICINA ADMINISTRACIÓN'},
+    {id:16,name:'PORTONES CICLO 2'},
+    {id:17,name:'PORTON CHICO SALA DE MÁQUINAS'},
+    {id:18,name:'TRAFOR MOLINO'},
+    {id:19,name:'PORTERÍA'},
+    {id:20,name:'TERCERIZADO LOPEZ DARIO'},
+    {id:21,name:'COCINA OFICINA'},
+    {id:22,name:'SYESA GAS PUERTA INTERNA'},
+    {id:23,name:'ROPA VISITAS'},
+    {id:24,name:'INSUMO PRODUCCIÓN'},
+    {id:25,name:'MOLINETE ENTRA Y SALIDA'},
+    {id:26,name:'DEPOSITO CARTÓN'},
+    {id:27,name:'CALDERA VIEJA'}
+    ];
+    const STORAGE_KEYS='llavesPrueba', STORAGE_HISTORY='historialLlaves';
+    function loadData(){
+      let saved=null; try{saved=JSON.parse(localStorage.getItem(STORAGE_KEYS)||'null')}catch(e){}
+      const base=saved&&Array.isArray(saved)&&saved.length?saved:initial.map(k=>({...k,status:'available',responsible:null,retiredAt:null}));
+      // Keep prior state for existing IDs; add the remaining keys without overwriting saved records.
+      const byId=new Map(base.map(k=>[Number(k.id),k]));
+      initial.forEach(k=>{if(!byId.has(k.id))byId.set(k.id,{...k,status:'available',responsible:null,retiredAt:null})});
+      return [...byId.values()].sort((a,b)=>Number(a.id)-Number(b.id));
+    }
+    let data=loadData();
+    let history=[]; try{history=JSON.parse(localStorage.getItem(STORAGE_HISTORY)||'[]');if(!Array.isArray(history))history=[]}catch(e){history=[]}
+    let currentUser='';
+    let scanner=null, scanning=false, selectedKeyId=null;
+    const $=id=>document.getElementById(id);
+    function save(){try{localStorage.setItem(STORAGE_KEYS,JSON.stringify(data));localStorage.setItem(STORAGE_HISTORY,JSON.stringify(history))}catch(e){alert('No se pudieron guardar los datos en este navegador. Exportá el historial y avisá al administrador.')}}
+    function now(){return new Date().toLocaleString('es-AR',{dateStyle:'short',timeStyle:'short'})}
+    function codeFor(id){return 'LLAVE-'+String(id).padStart(3,'0')}
+    function safe(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+    function enter(){
+     currentUser=$('employee').value;
+     $('user').textContent=currentUser;
+     $('login').classList.add('hidden');$('app').classList.remove('hidden');
+     $('keySelect').innerHTML=data.map(k=>`<option value="${k.id}">${codeFor(k.id)} — ${safe(k.name)}</option>`).join('');
+     render();
+    }
+    function findKeyFromQr(decoded){
+     const value=String(decoded||'').trim().toUpperCase();
+     let m=value.match(/LLAVE[\s_-]*0*(\d{1,3})/i);
+     if(!m && /^\d{1,3}$/.test(value))m=[value,value];
+     if(!m)return null;
+     const id=Number(m[1]);
+     return data.find(k=>Number(k.id)===id)||null;
+    }
+    function showKey(id){
+     const k=data.find(x=>Number(x.id)===Number(id)); if(!k)return;
+     selectedKeyId=k.id;
+     $('keySelect').value=String(k.id);
+     const card=$('keyCard');card.classList.remove('hidden');
+     const isAvailable=k.status==='available';
+     card.innerHTML=`<h2>🔑 ${codeFor(k.id)}</h2><h3>${safe(k.name)}</h3>
+     <p><span class="status ${isAvailable?'ok':'out'}">${isAvailable?'🟢 DISPONIBLE':'🔴 RETIRADA'}</span></p>
+     ${isAvailable?`<button data-action="retire" data-id="${k.id}">RETIRAR LLAVE</button>`:
+     `<p><b>Retiró originalmente:</b> ${safe(k.responsible||'No registrado')}<br><b>Fecha/hora del retiro:</b> ${safe(k.retiredAt||'No registrada')}</p>
+     <button class="danger" data-action="return" data-id="${k.id}">DEVOLVER LLAVE</button>`}`;
+     card.querySelector('button[data-action]').addEventListener('click',e=>{
+       const id=Number(e.currentTarget.dataset.id);
+       if(e.currentTarget.dataset.action==='retire')retire(id);else devolver(id);
+     });
+    }
+    function scanManual(){showKey(Number($('keySelect').value))}
+    function retire(id){
+     const k=data.find(x=>Number(x.id)===Number(id));if(!k)return;
+     if(k.status!=='available'){alert('Esta llave ya figura como retirada.');showKey(id);return}
+     const t=now();k.status='taken';k.responsible=currentUser;k.retiredAt=t;
+     history.unshift({key:k.name,keyId:k.id,code:codeFor(k.id),type:'RETIRO',retiro:currentUser,fecha:t});
+     save();render();showKey(id);alert('Retiro registrado. Responsable: '+currentUser);
+    }
+    function devolver(id){
+     const k=data.find(x=>Number(x.id)===Number(id));if(!k)return;
+     if(k.status==='available'){alert('Esta llave ya figura como disponible.');showKey(id);return}
+     const t=now(),original=k.responsible;
+     history.unshift({key:k.name,keyId:k.id,code:codeFor(k.id),type:'DEVOLUCIÓN',retiro:original,devuelve:currentUser,fecha:t});
+     k.status='available';k.responsible=null;k.retiredAt=null;
+     save();render();showKey(id);alert('Devolución registrada.\nRetiró: '+(original||'No registrado')+'\nDevolvió: '+currentUser);
+    }
+    function render(){
+     $('state').innerHTML=data.map(k=>`<tr><td>${codeFor(k.id)}</td><td>${safe(k.name)}</td><td>${k.status==='available'?'🟢 Disponible':'🔴 Retirada'}</td><td>${safe(k.responsible||'—')}</td></tr>`).join('');
+     $('history').innerHTML=history.length?history.map(x=>`<div class="history-item"><b>${safe(x.key||'Llave')}</b> <span class="tag">${safe(x.type||'MOVIMIENTO')}</span><br><span class="small">${safe(x.code||'')}</span><br>${x.type==='RETIRO'?`Retiró: ${safe(x.retiro||'—')}`:`Retiró: ${safe(x.retiro||'—')} · Devolvió: ${safe(x.devuelve||'—')}`}<br><span class="small">${safe(x.fecha||'')}</span></div>`).join(''):'Todavía no hay movimientos.';
+    }
+    async function startScan(){
+     $('scanMessage').textContent='';
+     if(!window.Html5Qrcode){$('scanMessage').textContent='No se pudo cargar el lector QR. Comprobá tu conexión a internet y recargá la página.';return}
+     if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$('scanMessage').textContent='Este navegador no permite acceder a la cámara. Abrí la página publicada mediante HTTPS en Chrome o Edge.';return}
+     $('reader').classList.remove('hidden');$('startScan').classList.add('hidden');$('stopScan').classList.remove('hidden');
+     try{
+       scanner=new Html5Qrcode('reader');
+       scanning=true;
+       await scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:230,height:230}},async decoded=>{
+         if(!scanning)return;
+         const k=findKeyFromQr(decoded);
+         if(k){
+           $('scanMessage').textContent='QR leído: '+codeFor(k.id)+' — '+k.name;
+           await stopScan();
+           showKey(k.id);
+         }else{
+           $('scanMessage').textContent='QR leído, pero no corresponde a una llave registrada. El QR debe contener un código como LLAVE-001.';
+         }
+       },()=>{});
+     }catch(err){
+       scanning=false;$('reader').classList.add('hidden');$('startScan').classList.remove('hidden');$('stopScan').classList.add('hidden');
+       $('scanMessage').textContent='No se pudo abrir la cámara. Revisá el permiso de cámara del navegador y que la página esté publicada con HTTPS. Detalle: '+(err&&err.message?err.message:String(err));
+     }
+    }
+    async function stopScan(){
+     scanning=false;
+     if(scanner){try{if(scanner.isScanning)await scanner.stop();scanner.clear()}catch(e){}scanner=null}
+     $('reader').classList.add('hidden');$('startScan').classList.remove('hidden');$('stopScan').classList.add('hidden');
+    }
+    function exportCsv(){
+     const rows=[['Codigo','Llave','Movimiento','Retiro por','Devolvio','Fecha y hora']];
+     history.slice().reverse().forEach(x=>rows.push([x.code||codeFor(x.keyId||''),x.key||'',x.type||'',x.retiro||'',x.devuelve||'',x.fecha||'']));
+     const csv='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');
+     const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+     const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='historial-control-llaves.csv';a.click();URL.revokeObjectURL(url);
+    }
+    $('enterBtn').addEventListener('click',enter);
+    $('startScan').addEventListener('click',startScan);
+    $('stopScan').addEventListener('click',stopScan);
+    $('manualSelect').addEventListener('click',scanManual);
+    $('changeUser').addEventListener('click',async()=>{await stopScan();$('app').classList.add('hidden');$('login').classList.remove('hidden');$('keyCard').classList.add('hidden')});
+    $('exportCsv').addEventListener('click',exportCsv);
+    window.addEventListener('pagehide',()=>{if(scanner&&scanning){scanner.stop().catch(()=>{})}});
+    </script>
+    </body>
+      </html>
