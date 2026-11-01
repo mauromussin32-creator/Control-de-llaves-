@@ -1,249 +1,59 @@
-    <!doctype html>
-    <html lang="es">
-    <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="theme-color" content="#0b6b43">
-    <title>Control de Llaves · ENERCOP</title>
-    <style>
-    :root{--green:#0b6b43;--green-dark:#075c39;--bg:#f3f5f4;--ink:#172026;--muted:#667085;--red:#b42318;--line:#e4e7ec}
-    *{box-sizing:border-box}
-    body{font-family:Arial,sans-serif;background:var(--bg);margin:0;color:var(--ink)}
-    header{background:var(--green);color:#fff;padding:20px 16px;text-align:center}
-    header h1{font-size:clamp(25px,6vw,36px);margin:4px 0 10px}
-    header p{margin:0;font-size:16px}
-    main{max-width:760px;margin:auto;padding:14px}
-    .card{background:#fff;border-radius:16px;padding:18px;margin:14px 0;box-shadow:0 2px 10px #0001}
-    h2{font-size:23px;margin:0 0 12px}
-    p{line-height:1.45}
-    .small{font-size:14px;color:var(--muted)}
-    button,select,input{font:inherit;font-size:17px;padding:13px;border-radius:10px;border:1px solid #cfd4dc;width:100%;margin-top:10px}
-    button{background:var(--green);color:white;border:0;font-weight:bold;cursor:pointer}
-    button:disabled{opacity:.55}
-    button.secondary{background:#e7f1ec;color:var(--green-dark)}
-    button.danger{background:var(--red)}
-    button.neutral{background:#344054}
-    .hidden{display:none!important}
-    .status{padding:7px 10px;border-radius:20px;font-weight:bold;display:inline-block;font-size:14px}
-    .ok{background:#dcfae6;color:#067647}.out{background:#fee4e2;color:var(--red)}
-    .notice{padding:12px;border-radius:10px;background:#fffaeb;color:#93370d;font-size:14px;line-height:1.4}
-    .success{padding:12px;border-radius:10px;background:#ecfdf3;color:#067647;font-size:14px}
-    #reader{width:100%;overflow:hidden;border-radius:12px;margin-top:12px}
-    #reader video{border-radius:12px}
-    .actions{display:grid;grid-template-columns:1fr;gap:8px}
-    table{width:100%;border-collapse:collapse;margin-top:10px}
-    th,td{padding:9px 7px;border-bottom:1px solid var(--line);text-align:left;font-size:13px;vertical-align:top}
-    th{background:#f9fafb}
-    .table-wrap{overflow-x:auto}
-    .history-item{border-bottom:1px solid var(--line);padding:10px 0;line-height:1.45}
-    .history-item:last-child{border-bottom:0}
-    .tag{display:inline-block;border-radius:6px;padding:3px 7px;background:#f2f4f7;font-size:12px;font-weight:bold}
-    footer{text-align:center;color:var(--muted);font-size:12px;padding:16px}
-    @media(min-width:520px){.actions{grid-template-columns:1fr 1fr}th,td{font-size:14px}}
-    </style>
-    </head>
-    <body>
-    <header>
-      <h1>🔑 CONTROL DE LLAVES</h1>
-      <p>ENERCOP · Control de retiros y devoluciones</p>
-    </header>
-    <main>
-      <section id="login" class="card">
-        <h2>👤 Identificar empleado</h2>
-        <p class="small">Seleccioná quién está usando el sistema.</p>
-        <select id="employee" aria-label="Empleado">
-          <option>Juan Pérez</option><option>Pedro Gómez</option><option>María López</option><option>Carlos González</option>
-        </select>
-        <button id="enterBtn">INGRESAR</button>
-        <p class="small">La lista es de prueba. Antes de usar en planta, reemplazá estos nombres por los empleados autorizados.</p>
-      </section>
-
-      <section id="app" class="hidden">
-        <section class="card">
-          <h2>Hola, <span id="user"></span> 👋</h2>
-          <p class="small">Escaneá el QR pegado en la llave. También podés elegir una llave manualmente para probar.</p>
-          <div class="actions">
-            <button id="startScan">📷 ABRIR CÁMARA Y ESCANEAR QR</button>
-            <button id="stopScan" class="neutral hidden">DETENER CÁMARA</button>
-          </div>
-          <div id="reader" class="hidden"></div>
-          <div id="scanMessage" class="small" role="status"></div>
-          <div class="notice">La cámara necesita permiso y la página debe abrirse por HTTPS. Si el navegador pregunta, elegí <b>Permitir</b>.</div>
-        </section>
-
-        <section class="card">
-          <h2>🔎 Selección manual (prueba)</h2>
-          <label for="keySelect" class="small">Elegí una llave si todavía no tenés los QR impresos.</label>
-          <select id="keySelect"></select>
-          <button id="manualSelect" class="secondary">VER LLAVE SELECCIONADA</button>
-        </section>
-
-        <section id="keyCard" class="card hidden"></section>
-
-        <section class="card">
-          <h2>📋 Estado actual</h2>
-          <div class="table-wrap"><table><thead><tr><th>Código</th><th>Llave</th><th>Estado</th><th>Responsable actual</th></tr></thead><tbody id="state"></tbody></table></div>
-        </section>
-
-        <section class="card">
-          <h2>📚 Historial de movimientos</h2>
-          <p class="small">Los movimientos se muestran del más reciente al más antiguo.</p>
-          <div id="history">Todavía no hay movimientos.</div>
-          <button id="exportCsv" class="secondary">⬇️ EXPORTAR HISTORIAL CSV</button>
-        </section>
-
-        <section class="card">
-          <h2>👤 Cambiar empleado</h2>
-          <button id="changeUser" class="neutral">VOLVER A IDENTIFICARME</button>
-        </section>
-      </section>
-    </main>
-    <footer>Control de Llaves · Prototipo de prueba</footer>
-
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <script>
-    'use strict';
-    const initial=[
-    {id:1,name:'PUERTA VIRGEN'},
-    {id:2,name:'OFICINA VENTAS'},
-    {id:3,name:'LLAVE CAJA FUERTE'},
-    {id:4,name:'COMEDOR ZONA LIMPIA'},
-    {id:5,name:'OFICINA SENASA'},
-    {id:6,name:'MOLINO'},
-    {id:7,name:'DEPOSITO LIMPIEZA'},
-    {id:8,name:'OFICINA PRODUCCIÓN'},
-    {id:9,name:'DEPOSITO INSUMOS'},
-    {id:10,name:'DEPOSITO PLAGAS (M.I.P.)'},
-    {id:11,name:'OFICINA CALIDAD'},
-    {id:12,name:'COMEDOR ZONA SUCIA'},
-    {id:13,name:'CONSULTORIO MEDICO'},
-    {id:14,name:'VESTUARIO ZONA LIMPIA'},
-    {id:15,name:'OFICINA ADMINISTRACIÓN'},
-    {id:16,name:'PORTONES CICLO 2'},
-    {id:17,name:'PORTON CHICO SALA DE MÁQUINAS'},
-    {id:18,name:'TRAFOR MOLINO'},
-    {id:19,name:'PORTERÍA'},
-    {id:20,name:'TERCERIZADO LOPEZ DARIO'},
-    {id:21,name:'COCINA OFICINA'},
-    {id:22,name:'SYESA GAS PUERTA INTERNA'},
-    {id:23,name:'ROPA VISITAS'},
-    {id:24,name:'INSUMO PRODUCCIÓN'},
-    {id:25,name:'MOLINETE ENTRA Y SALIDA'},
-    {id:26,name:'DEPOSITO CARTÓN'},
-    {id:27,name:'CALDERA VIEJA'}
-    ];
-    const STORAGE_KEYS='llavesPrueba', STORAGE_HISTORY='historialLlaves';
-    function loadData(){
-      let saved=null; try{saved=JSON.parse(localStorage.getItem(STORAGE_KEYS)||'null')}catch(e){}
-      const base=saved&&Array.isArray(saved)&&saved.length?saved:initial.map(k=>({...k,status:'available',responsible:null,retiredAt:null}));
-      // Keep prior state for existing IDs; add the remaining keys without overwriting saved records.
-      const byId=new Map(base.map(k=>[Number(k.id),k]));
-      initial.forEach(k=>{if(!byId.has(k.id))byId.set(k.id,{...k,status:'available',responsible:null,retiredAt:null})});
-      return [...byId.values()].sort((a,b)=>Number(a.id)-Number(b.id));
-    }
-    let data=loadData();
-    let history=[]; try{history=JSON.parse(localStorage.getItem(STORAGE_HISTORY)||'[]');if(!Array.isArray(history))history=[]}catch(e){history=[]}
-    let currentUser='';
-    let scanner=null, scanning=false, selectedKeyId=null;
-    const $=id=>document.getElementById(id);
-    function save(){try{localStorage.setItem(STORAGE_KEYS,JSON.stringify(data));localStorage.setItem(STORAGE_HISTORY,JSON.stringify(history))}catch(e){alert('No se pudieron guardar los datos en este navegador. Exportá el historial y avisá al administrador.')}}
-    function now(){return new Date().toLocaleString('es-AR',{dateStyle:'short',timeStyle:'short'})}
-    function codeFor(id){return 'LLAVE-'+String(id).padStart(3,'0')}
-    function safe(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-    function enter(){
-     currentUser=$('employee').value;
-     $('user').textContent=currentUser;
-     $('login').classList.add('hidden');$('app').classList.remove('hidden');
-     $('keySelect').innerHTML=data.map(k=>`<option value="${k.id}">${codeFor(k.id)} — ${safe(k.name)}</option>`).join('');
-     render();
-    }
-    function findKeyFromQr(decoded){
-     const value=String(decoded||'').trim().toUpperCase();
-     let m=value.match(/LLAVE[\s_-]*0*(\d{1,3})/i);
-     if(!m && /^\d{1,3}$/.test(value))m=[value,value];
-     if(!m)return null;
-     const id=Number(m[1]);
-     return data.find(k=>Number(k.id)===id)||null;
-    }
-    function showKey(id){
-     const k=data.find(x=>Number(x.id)===Number(id)); if(!k)return;
-     selectedKeyId=k.id;
-     $('keySelect').value=String(k.id);
-     const card=$('keyCard');card.classList.remove('hidden');
-     const isAvailable=k.status==='available';
-     card.innerHTML=`<h2>🔑 ${codeFor(k.id)}</h2><h3>${safe(k.name)}</h3>
-     <p><span class="status ${isAvailable?'ok':'out'}">${isAvailable?'🟢 DISPONIBLE':'🔴 RETIRADA'}</span></p>
-     ${isAvailable?`<button data-action="retire" data-id="${k.id}">RETIRAR LLAVE</button>`:
-     `<p><b>Retiró originalmente:</b> ${safe(k.responsible||'No registrado')}<br><b>Fecha/hora del retiro:</b> ${safe(k.retiredAt||'No registrada')}</p>
-     <button class="danger" data-action="return" data-id="${k.id}">DEVOLVER LLAVE</button>`}`;
-     card.querySelector('button[data-action]').addEventListener('click',e=>{
-       const id=Number(e.currentTarget.dataset.id);
-       if(e.currentTarget.dataset.action==='retire')retire(id);else devolver(id);
-     });
-    }
-    function scanManual(){showKey(Number($('keySelect').value))}
-    function retire(id){
-     const k=data.find(x=>Number(x.id)===Number(id));if(!k)return;
-     if(k.status!=='available'){alert('Esta llave ya figura como retirada.');showKey(id);return}
-     const t=now();k.status='taken';k.responsible=currentUser;k.retiredAt=t;
-     history.unshift({key:k.name,keyId:k.id,code:codeFor(k.id),type:'RETIRO',retiro:currentUser,fecha:t});
-     save();render();showKey(id);alert('Retiro registrado. Responsable: '+currentUser);
-    }
-    function devolver(id){
-     const k=data.find(x=>Number(x.id)===Number(id));if(!k)return;
-     if(k.status==='available'){alert('Esta llave ya figura como disponible.');showKey(id);return}
-     const t=now(),original=k.responsible;
-     history.unshift({key:k.name,keyId:k.id,code:codeFor(k.id),type:'DEVOLUCIÓN',retiro:original,devuelve:currentUser,fecha:t});
-     k.status='available';k.responsible=null;k.retiredAt=null;
-     save();render();showKey(id);alert('Devolución registrada.\nRetiró: '+(original||'No registrado')+'\nDevolvió: '+currentUser);
-    }
-    function render(){
-     $('state').innerHTML=data.map(k=>`<tr><td>${codeFor(k.id)}</td><td>${safe(k.name)}</td><td>${k.status==='available'?'🟢 Disponible':'🔴 Retirada'}</td><td>${safe(k.responsible||'—')}</td></tr>`).join('');
-     $('history').innerHTML=history.length?history.map(x=>`<div class="history-item"><b>${safe(x.key||'Llave')}</b> <span class="tag">${safe(x.type||'MOVIMIENTO')}</span><br><span class="small">${safe(x.code||'')}</span><br>${x.type==='RETIRO'?`Retiró: ${safe(x.retiro||'—')}`:`Retiró: ${safe(x.retiro||'—')} · Devolvió: ${safe(x.devuelve||'—')}`}<br><span class="small">${safe(x.fecha||'')}</span></div>`).join(''):'Todavía no hay movimientos.';
-    }
-    async function startScan(){
-     $('scanMessage').textContent='';
-     if(!window.Html5Qrcode){$('scanMessage').textContent='No se pudo cargar el lector QR. Comprobá tu conexión a internet y recargá la página.';return}
-     if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$('scanMessage').textContent='Este navegador no permite acceder a la cámara. Abrí la página publicada mediante HTTPS en Chrome o Edge.';return}
-     $('reader').classList.remove('hidden');$('startScan').classList.add('hidden');$('stopScan').classList.remove('hidden');
-     try{
-       scanner=new Html5Qrcode('reader');
-       scanning=true;
-       await scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:230,height:230}},async decoded=>{
-         if(!scanning)return;
-         const k=findKeyFromQr(decoded);
-         if(k){
-           $('scanMessage').textContent='QR leído: '+codeFor(k.id)+' — '+k.name;
-           await stopScan();
-           showKey(k.id);
-         }else{
-           $('scanMessage').textContent='QR leído, pero no corresponde a una llave registrada. El QR debe contener un código como LLAVE-001.';
-         }
-       },()=>{});
-     }catch(err){
-       scanning=false;$('reader').classList.add('hidden');$('startScan').classList.remove('hidden');$('stopScan').classList.add('hidden');
-       $('scanMessage').textContent='No se pudo abrir la cámara. Revisá el permiso de cámara del navegador y que la página esté publicada con HTTPS. Detalle: '+(err&&err.message?err.message:String(err));
-     }
-    }
-    async function stopScan(){
-     scanning=false;
-     if(scanner){try{if(scanner.isScanning)await scanner.stop();scanner.clear()}catch(e){}scanner=null}
-     $('reader').classList.add('hidden');$('startScan').classList.remove('hidden');$('stopScan').classList.add('hidden');
-    }
-    function exportCsv(){
-     const rows=[['Codigo','Llave','Movimiento','Retiro por','Devolvio','Fecha y hora']];
-     history.slice().reverse().forEach(x=>rows.push([x.code||codeFor(x.keyId||''),x.key||'',x.type||'',x.retiro||'',x.devuelve||'',x.fecha||'']));
-     const csv='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');
-     const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-     const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='historial-control-llaves.csv';a.click();URL.revokeObjectURL(url);
-    }
-    $('enterBtn').addEventListener('click',enter);
-    $('startScan').addEventListener('click',startScan);
-    $('stopScan').addEventListener('click',stopScan);
-    $('manualSelect').addEventListener('click',scanManual);
-    $('changeUser').addEventListener('click',async()=>{await stopScan();$('app').classList.add('hidden');$('login').classList.remove('hidden');$('keyCard').classList.add('hidden')});
-    $('exportCsv').addEventListener('click',exportCsv);
-    window.addEventListener('pagehide',()=>{if(scanner&&scanning){scanner.stop().catch(()=>{})}});
-    </script>
-    </body>
-      </html>
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b6b43"><title>Control de Llaves · ENERCOP</title>
+<style>
+:root{--green:#0b6b43;--green-dark:#075c39;--bg:#f3f5f4;--ink:#172026;--muted:#667085;--red:#b42318;--line:#e4e7ec}*{box-sizing:border-box}body{font-family:Arial,sans-serif;background:var(--bg);margin:0;color:var(--ink)}header{background:var(--green);color:#fff;padding:20px 16px;text-align:center}header h1{font-size:clamp(25px,6vw,36px);margin:4px 0 10px}header p{margin:0;font-size:16px}main{max-width:760px;margin:auto;padding:14px}.card{background:#fff;border-radius:16px;padding:18px;margin:14px 0;box-shadow:0 2px 10px #0001}h2{font-size:23px;margin:0 0 12px}p{line-height:1.45}.small{font-size:14px;color:var(--muted)}button,select,input{font:inherit;font-size:17px;padding:13px;border-radius:10px;border:1px solid #cfd4dc;width:100%;margin-top:10px}button{background:var(--green);color:white;border:0;font-weight:bold;cursor:pointer}button:disabled{opacity:.55}button.secondary{background:#e7f1ec;color:var(--green-dark)}button.danger{background:var(--red)}button.neutral{background:#344054}.hidden{display:none!important}.status{padding:7px 10px;border-radius:20px;font-weight:bold;display:inline-block;font-size:14px}.ok{background:#dcfae6;color:#067647}.out{background:#fee4e2;color:var(--red)}.notice{padding:12px;border-radius:10px;background:#fffaeb;color:#93370d;font-size:14px;line-height:1.4}#reader{width:100%;overflow:hidden;border-radius:12px;margin-top:12px}#reader video{border-radius:12px}.actions{display:grid;grid-template-columns:1fr;gap:8px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:9px 7px;border-bottom:1px solid var(--line);text-align:left;font-size:13px;vertical-align:top}th{background:#f9fafb}.table-wrap{overflow-x:auto}.history-item{border-bottom:1px solid var(--line);padding:10px 0;line-height:1.45}.history-item:last-child{border-bottom:0}.tag{display:inline-block;border-radius:6px;padding:3px 7px;background:#f2f4f7;font-size:12px;font-weight:bold}footer{text-align:center;color:var(--muted);font-size:12px;padding:16px}@media(min-width:520px){.actions{grid-template-columns:1fr 1fr}th,td{font-size:14px}}
+</style></head><body>
+<header><h1>🔑 CONTROL DE LLAVES</h1><p>ENERCOP · Control de retiros y devoluciones</p></header>
+<main>
+<section id="login" class="card"><h2>👤 Identificar empleado</h2><p class="small">Ingresá tu número de legajo y PIN de 4 dígitos.</p>
+<input id="legajoInput" inputmode="numeric" autocomplete="username" placeholder="Número de legajo">
+<input id="pinInput" inputmode="numeric" type="password" maxlength="4" autocomplete="current-password" placeholder="PIN de 4 dígitos">
+<button id="enterBtn">INGRESAR</button><p id="loginMsg" class="small" role="status"></p></section>
+<section id="app" class="hidden">
+<section class="card"><h2>Hola, <span id="user"></span> 👋</h2><p class="small">Escaneá el QR pegado en la llave. También podés elegir una llave manualmente.</p>
+<div class="actions"><button id="startScan">📷 ABRIR CÁMARA Y ESCANEAR QR</button><button id="stopScan" class="neutral hidden">DETENER CÁMARA</button></div>
+<div id="reader" class="hidden"></div><div id="scanMessage" class="small" role="status"></div><div class="notice">La cámara necesita permiso y la página debe abrirse por HTTPS. Si el navegador pregunta, elegí <b>Permitir</b>.</div></section>
+<section class="card"><h2>🔎 Selección manual</h2><label for="keySelect" class="small">Elegí una llave.</label><select id="keySelect"></select><button id="manualSelect" class="secondary">VER LLAVE SELECCIONADA</button></section>
+<section id="keyCard" class="card hidden"></section>
+<section class="card"><h2>📋 Estado actual</h2><div class="table-wrap"><table><thead><tr><th>Código</th><th>Llave</th><th>Estado</th><th>Responsable actual</th></tr></thead><tbody id="state"></tbody></table></div></section>
+<section class="card"><h2>📚 Historial de movimientos</h2><p class="small">Los movimientos se muestran del más reciente al más antiguo.</p><div id="history">Todavía no hay movimientos.</div><button id="exportCsv" class="secondary">⬇️ EXPORTAR HISTORIAL CSV</button></section>
+<section class="card"><h2>👤 Cambiar empleado</h2><button id="changeUser" class="neutral">VOLVER A IDENTIFICARME</button></section></section></main><footer>Control de Llaves · Prototipo</footer>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script><script>
+'use strict';
+const employees=[{"legajo":"34320","name":"AGUSTINI, CARLOS ALBERTO","pin":"4552"},{"legajo":"43477","name":"AGUSTINI, WILSON DAVID","pin":"2616"},{"legajo":"121945","name":"ALMIRON, LAUTARO DAVID","pin":"9039"},{"legajo":"52691","name":"ALVES, MATIAS EZEQUIEL","pin":"3132"},{"legajo":"42328","name":"ALVEZ, ALEJANDRO JOSE","pin":"8384"},{"legajo":"68463","name":"AQUINO AYALA, FABIO EZEQUIEL","pin":"0164"},{"legajo":"25555","name":"AQUINO, EDUARDO JAVIER","pin":"4355"},{"legajo":"8677","name":"ARANDA, ALBERTO BUENAVENTURA","pin":"8325"},{"legajo":"109062","name":"ARNOLD, EMIR NAHUEL","pin":"5188"},{"legajo":"40953","name":"ARNOLD, NESTOR FABIAN","pin":"5051"},{"legajo":"53869","name":"ARRIOLA, CRISTIAN JESUS","pin":"9472"},{"legajo":"118982","name":"ARRIOLA, WALTER AGUSTIN","pin":"7786"},{"legajo":"119139","name":"BAEZ, JAVIER ANDRES","pin":"9877"},{"legajo":"45707","name":"BANDEO, MARCELO LUIS","pin":"8806"},{"legajo":"42327","name":"BANEGA, GABRIEL ANDRES","pin":"3714"},{"legajo":"65832","name":"BARRIOS, ANTONIO SENOBIO","pin":"0742"},{"legajo":"79823","name":"BASTACINI, LEANDRO EMANUEL","pin":"1009"},{"legajo":"32787","name":"BIANCHI, NELSON OSVALDO","pin":"5334"},{"legajo":"118777","name":"BRAC, LUCAS EMANUEL","pin":"5081"},{"legajo":"49998","name":"BRESSAN, ALEXIS ANDRES","pin":"5910"},{"legajo":"118498","name":"BRESSAN, FRANCO ALEXIS","pin":"7719"},{"legajo":"49202","name":"BRESSAN, GABRIEL FERNANDO","pin":"6775"},{"legajo":"115855","name":"BUSEGHIN, MATEO ARIEL","pin":"0692"},{"legajo":"55306","name":"CABRERA, WALTER PATRICIO","pin":"9418"},{"legajo":"56668","name":"CACERES, RUBEN DARIO","pin":"4368"},{"legajo":"51590","name":"CAINELLI, GONZALO","pin":"0921"},{"legajo":"68636","name":"CANCIAN, ALEXIS LISANDRO","pin":"5932"},{"legajo":"59206","name":"CARDOZO, LUCAS ANDRES","pin":"6732"},{"legajo":"43892","name":"CIAN, EDGARDO LUIS","pin":"6934"},{"legajo":"63218","name":"CIAN, MIQUEAS GABRIEL","pin":"8534"},{"legajo":"121158","name":"CIPREZ, ALEXANDER URIEL","pin":"6044"},{"legajo":"118497","name":"CONDE, ERICO AGUSTIN","pin":"1854"},{"legajo":"74145","name":"CONTRERA, ULISES ANDRES","pin":"5467"},{"legajo":"45270","name":"CORGNALI, SANTIAGO SEBASTIAN","pin":"8595"},{"legajo":"45016","name":"CORONEL, ESTEBAN LUIS","pin":"2189"},{"legajo":"43476","name":"CUCIT, CRISTIAN EMANUEL","pin":"3676"},{"legajo":"29096","name":"CUCIT, WALTER OMAR","pin":"2405"},{"legajo":"41967","name":"CUEVAS, SEBASTIAN MARTIN","pin":"8990"},{"legajo":"37178","name":"CUSIT, ALDRIAN JAVIER","pin":"6910"},{"legajo":"115327","name":"DARAN, TOMAS NAHUEL","pin":"9519"},{"legajo":"33071","name":"DEAN, GERMAN LUIS","pin":"8706"},{"legajo":"93520","name":"DELBON, SABINO SEBASTIAN","pin":"1791"},{"legajo":"40179","name":"DELLA ROSA, MARCOS EMANUEL","pin":"3222"},{"legajo":"54084","name":"DIAZ, MARCELO JAVIER","pin":"7251"},{"legajo":"39526","name":"DOCEVE, HERNAN ANDRES","pin":"2681"},{"legajo":"75195","name":"DOVIS, LEONEL MATIAS","pin":"1778"},{"legajo":"86304","name":"DOVIS, SANTIAGO NICOLAS","pin":"3902"},{"legajo":"82130","name":"ESCARLON, FEDERICO JAVIER","pin":"2216"},{"legajo":"55200","name":"ESPINDOLA, JUAN MANUEL","pin":"0452"},{"legajo":"109203","name":"ESPINOZA, AGUSTIN ERNESTO","pin":"7392"},{"legajo":"39528","name":"FACCIOLI, LEONARDO ANDRES","pin":"9991"},{"legajo":"110114","name":"FAIN, ANDRES ESEQUIEL","pin":"2869"},{"legajo":"85542","name":"FAULKNER, ALAN EVER","pin":"1087"},{"legajo":"121065","name":"FAVATIER, EVER NAHUEL","pin":"8012"},{"legajo":"65432","name":"FELDMANN, DARIO LUIS","pin":"1826"},{"legajo":"25556","name":"FERESIN, MANUEL EDUARDO","pin":"1655"},{"legajo":"53870","name":"FERESIN, MARCOS ABEL","pin":"4955"},{"legajo":"49201","name":"FERNANDEZ, ARIEL","pin":"7421"},{"legajo":"118376","name":"FERREYRA PORTILLO, FACUNDO MIYEN","pin":"0000"},{"legajo":"108840","name":"FINOS, BRUNO MARTIN","pin":"9011"},{"legajo":"68637","name":"FIRPO, EZEQUIEL NICOLAS","pin":"2827"},{"legajo":"66836","name":"FRANCO, EDUARDO MIGUEL","pin":"2955"},{"legajo":"39886","name":"FRANCO, NICOLAS EDUARDO","pin":"2876"},{"legajo":"40955","name":"FRANCO, SEBASTIAN ANDRES","pin":"1400"},{"legajo":"36832","name":"FURLAN, WALTER OSCAR","pin":"7219"},{"legajo":"115221","name":"FURRER, NICOLAS ALEJANDRO","pin":"4603"},{"legajo":"127545","name":"GOI, MARCOS JAVIER","pin":"6362"},{"legajo":"86737","name":"GOMEZ, NAHUEL EZEQUIEL","pin":"4183"},{"legajo":"108259","name":"GONZALEZ, FRANCISCO OSCAR","pin":"7895"},{"legajo":"53818","name":"GOY, RENZO DANILO","pin":"6042"},{"legajo":"57149","name":"GUALLA, ARIEL GONZALO","pin":"8851"},{"legajo":"115220","name":"GUAÑABENS, ALEXIS MARTIN","pin":"6236"},{"legajo":"123457","name":"HACEN, IGNACIO MARTIN","pin":"3725"},{"legajo":"90334","name":"HERRERA, MARCO ANDRES","pin":"1154"},{"legajo":"46025","name":"HERRERA, NATANAEL SANTIAGO","pin":"4115"},{"legajo":"82339","name":"HIDALGO, IVAN MARCELO","pin":"2949"},{"legajo":"38251","name":"HIDALGO, JUAN PABLO","pin":"2592"},{"legajo":"49503","name":"HURT, LIS JOANA","pin":"9163"},{"legajo":"119142","name":"IBARRA, MELINA AYLEN","pin":"6709"},{"legajo":"108836","name":"IBARRA, TOBIAS BENJAMIN","pin":"9781"},{"legajo":"84786","name":"IGLESIAS FRAILE, GONZALO NICOLAS","pin":"6455"},{"legajo":"46054","name":"LEBUS, ENZO ELOY","pin":"0324"},{"legajo":"20092","name":"LEGUIZAMON, DANIEL ANTONIO","pin":"9756"},{"legajo":"39992","name":"LEGUIZAMON, REINALDO ANDRES","pin":"8626"},{"legajo":"108752","name":"LEIVA, RICARDO BRIAN","pin":"7918"},{"legajo":"65431","name":"LOPEZ, GABRIEL BLAS","pin":"3514"},{"legajo":"68465","name":"LOPEZ, JUAN JOSE","pin":"1394"},{"legajo":"20095","name":"LOPEZ, RICARDO WALTER","pin":"6490"},{"legajo":"67334","name":"LORENZINI, ADRIAN ALEJANDRO","pin":"9357"},{"legajo":"50207","name":"LOVERA, GABRIEL OMAR","pin":"9790"},{"legajo":"98052","name":"LUDUEÑA, NICOLAS DAVID","pin":"7576"},{"legajo":"108258","name":"MACHUCA, ALCIDES DAMIAN ISMAEL","pin":"6598"},{"legajo":"65611","name":"MACHUCA, ANTONIO GABRIEL","pin":"3744"},{"legajo":"68466","name":"MACHUCA, FABIAN ISRAEL","pin":"9190"},{"legajo":"45170","name":"MACIEL, EMILIANO","pin":"9780"},{"legajo":"58966","name":"MACIEL, ROSENDO DANIEL","pin":"7613"},{"legajo":"45060","name":"MANCUELLO, FEDERICO NICOLAS","pin":"8221"},{"legajo":"117200","name":"MANSILLA, JOSE MARIA","pin":"7563"},{"legajo":"117420","name":"MAREGA, MARIA VIRGINIA","pin":"6443"},{"legajo":"41084","name":"MARTINELLI, WILFREDO VICTOR DANIEL","pin":"0805"},{"legajo":"32305","name":"MARTINEZ, IGNACIO NICOLAS","pin":"9121"},{"legajo":"88158","name":"MARTINEZ, LUICINA MARIA","pin":"3213"},{"legajo":"117801","name":"MASAT, FRANCISCO ANDRES JESUS","pin":"9801"},{"legajo":"39113","name":"MASIN, ALEJANDRO SEBASTIAN","pin":"7672"},{"legajo":"120512","name":"MASIN, ANDY AGUSTIN","pin":"5296"},{"legajo":"43478","name":"MASSIN, MATIAS LEONEL","pin":"3815"},{"legajo":"118072","name":"MEDINA, JUAN MANUEL","pin":"0589"},{"legajo":"65560","name":"MEDINA, MAURO ANGEL","pin":"2278"},{"legajo":"117174","name":"MENAPACE, EZEQUIEL","pin":"0054"},{"legajo":"95650","name":"MERELE, IGNACIO DANIEL","pin":"8195"},{"legajo":"49784","name":"MIAN, MARIA DE LOS ANGELES","pin":"7248"},{"legajo":"34652","name":"MICHEL, CRISTIAN ANDRES","pin":"8033"},{"legajo":"45273","name":"MONTENEGRO, JONATAN DAVID","pin":"5346"},{"legajo":"80796","name":"MORINGA, MATIAS EZEQUIEL","pin":"1691"},{"legajo":"61667","name":"MORZAN, ALEXIS GABRIEL","pin":"1348"},{"legajo":"52810","name":"MOSCHEN, ABEL ORLANDO","pin":"3842"},{"legajo":"43255","name":"MOSCHEN, EMILIANO EDGARDO","pin":"5236"},{"legajo":"68021","name":"MOYANO, EMANUEL ALEJANDRO","pin":"0401"},{"legajo":"53817","name":"MOYANO, LUCIANO DAVID","pin":"0522"},{"legajo":"28054","name":"NOBILE, JUAN PABLO","pin":"8549"},{"legajo":"65610","name":"OBREGON, NESTOR ALCIDES","pin":"4397"},{"legajo":"86391","name":"OJEDA, BIANCA RITA","pin":"0382"},{"legajo":"12757","name":"OJEDA, CARINA SOLEDAD","pin":"7824"},{"legajo":"72149","name":"OJEDA, PABLO RAMON","pin":"7426"},{"legajo":"56989","name":"ORTIZ, HERNAN RICARDO","pin":"1128"},{"legajo":"93203","name":"OTTINGER, ALEXANDER NICOLAS","pin":"9257"},{"legajo":"43624","name":"PADUAN, ANDRES HORACIO","pin":"4665"},{"legajo":"68020","name":"PADUAN, IVAN ORIEL","pin":"6962"},{"legajo":"65831","name":"PADUAN, JUAN ARIEL","pin":"2903"},{"legajo":"93202","name":"PARED, NICOLAS FERNANDO","pin":"6398"},{"legajo":"66022","name":"PARUZZO, FRANCO EMMANUEL","pin":"7491"},{"legajo":"89517","name":"PASCUA, MARTIN GERMAN","pin":"0156"},{"legajo":"43483","name":"PASSARINO, NELSON DARIO","pin":"8100"},{"legajo":"42353","name":"PERESON, CRISTIAN ALEXIS","pin":"0421"},{"legajo":"31462","name":"PERESON, EDUARDO DANIEL","pin":"2538"},{"legajo":"115187","name":"PEREYRA, JUAN PABLO","pin":"1035"},{"legajo":"131709","name":"PEREYRA, WALTER IVAN","pin":"4784"},{"legajo":"45415","name":"PICECCH, DIEGO SEBASTIAN","pin":"7712"},{"legajo":"54108","name":"PINTOS, JAVIER ANDRES","pin":"3048"},{"legajo":"45275","name":"PINTOS, SANDRO FABIO","pin":"7858"},{"legajo":"108841","name":"PINTOS, TOMAS EZEQUIEL","pin":"8823"},{"legajo":"31290","name":"PITTERI, FABRICIO JOSE","pin":"2158"},{"legajo":"126369","name":"PONCE, JUAN PABLO TOMAS","pin":"7731"},{"legajo":"67911","name":"PRIETO, MARIANA GEORGINA","pin":"2771"},{"legajo":"56176","name":"QUARIN, ULISES JOEL","pin":"2064"},{"legajo":"40629","name":"QUATRIN, JONATAN","pin":"6165"},{"legajo":"54186","name":"QUINTANA, GUSTAVO ARIEL","pin":"8865"},{"legajo":"41171","name":"QUIROZ, JONATAN EZEQUIEL","pin":"2146"},{"legajo":"40083","name":"RAFFIN, EMILIANO FABIAN","pin":"9987"},{"legajo":"32014","name":"RAFFIN, EVELYN JUDITH","pin":"8715"},{"legajo":"49502","name":"RAMIREZ, ANDREA BELEN","pin":"2560"},{"legajo":"46306","name":"RAMIREZ, ANGEL RODRIGO","pin":"0840"},{"legajo":"56388","name":"RAMOS, BRIAN NAHUEL","pin":"7980"},{"legajo":"54185","name":"RAMUA, HECTOR HORACIO","pin":"2899"},{"legajo":"56128","name":"RODRIGUEZ, EXEQUIEL","pin":"1509"},{"legajo":"93155","name":"RODRIGUEZ, LUCAS MATIAS","pin":"3837"},{"legajo":"39887","name":"RODRIGUEZ, MARCOS ANDRES","pin":"2239"},{"legajo":"71514","name":"RODRIGUEZ, MAURICIO ADRIAN","pin":"6670"},{"legajo":"65833","name":"ROMERO, JUAN DANIEL","pin":"9809"},{"legajo":"35474","name":"ROMERO, MARCELO DAVID","pin":"2567"},{"legajo":"121844","name":"ROMERO, MATEO LAUREANO","pin":"5148"},{"legajo":"84788","name":"ROMERO, MATIAS DANIEL","pin":"2915"},{"legajo":"104870","name":"ROSSETTO, DAVID ELIAS","pin":"8827"},{"legajo":"99963","name":"RUDA, MARCELO MIGUEL","pin":"4236"},{"legajo":"51589","name":"RUIZ DIAZ, DAVID EZEQUIEL","pin":"8462"},{"legajo":"60432","name":"RUIZ, HERNAN LEANDRO","pin":"2845"},{"legajo":"111809","name":"SAADE, AZUL MARIA","pin":"4537"},{"legajo":"78338","name":"SAGER, FACUNDO GABRIEL","pin":"1316"},{"legajo":"108292","name":"SANCHEZ, BRIAN EMANUEL","pin":"6538"},{"legajo":"36685","name":"SARTOR, EMILIANO","pin":"0420"},{"legajo":"46024","name":"SARTOR, MAURO NAHUEL","pin":"6534"},{"legajo":"20695","name":"SCHEIDEGGER, NESTOR HUMBERTO","pin":"3086"},{"legajo":"41082","name":"SEGOVIA, EMILIANO ANDRES","pin":"3536"},{"legajo":"84791","name":"SENN, GUSTAVO ALEJANDRO","pin":"7310"},{"legajo":"68019","name":"SERAFINI, MATIAS AGUSTIN","pin":"0066"},{"legajo":"26285","name":"SESMA, SEBASTIAN OSCAR","pin":"8937"},{"legajo":"111969","name":"SOSA, AGUSTIN ANTONIO","pin":"9720"},{"legajo":"54533","name":"SOSA, SANDRO ANDRES","pin":"8697"},{"legajo":"7881","name":"STANGAFERO, DARIO ALBERTO","pin":"0187"},{"legajo":"108837","name":"SUBERBIE, ANTONY EZEQUIEL","pin":"4302"},{"legajo":"68467","name":"TAPON, MANUEL DAVID","pin":"6000"},{"legajo":"74147","name":"TOFFUL, ALEXIS GABRIEL","pin":"3647"},{"legajo":"110978","name":"TORRESAGASTI, LUZ MARINA","pin":"3775"},{"legajo":"115185","name":"VALENZUELA, MATIAS ELIEL","pin":"1033"},{"legajo":"45481","name":"VALIENTE, CARLOS GABRIEL","pin":"0694"},{"legajo":"38783","name":"VAZQUEZ, ALEXIS OMAR","pin":"5120"},{"legajo":"56129","name":"VELAZQUEZ, ABEL","pin":"2878"},{"legajo":"45272","name":"VERA, ALEJANDRO ISMAEL","pin":"4894"},{"legajo":"52437","name":"VERON, MATIAS DANIEL","pin":"6396"},{"legajo":"43889","name":"VICENTIN, DAVID ALEJANDRO","pin":"6945"},{"legajo":"66837","name":"VILLA, WILFREDO RAMON","pin":"4198"},{"legajo":"68908","name":"VILLALBA, DANIELA PAOLA","pin":"4405"},{"legajo":"67699","name":"VILLALBA, JULIAN WALDEMAR","pin":"4635"},{"legajo":"28721","name":"VILLALBA, ROLANDO GABRIEL","pin":"0762"},{"legajo":"45169","name":"VIOLA, FEDERICO DANIEL","pin":"3722"},{"legajo":"115186","name":"ZAMER, GONZALO YOEL","pin":"0725"},{"legajo":"61354","name":"ZAMER, MARTIN ARIEL","pin":"2444"},{"legajo":"106093","name":"ZARATIN, ANA PAULA","pin":"6017"},{"legajo":"77998","name":"ZATTI, LEONARDO JAVIER","pin":"8677"},{"legajo":"43891","name":"ZILLI, ELIANA ELISABET","pin":"3235"},{"legajo":"78204","name":"ZILLI, LILIANA DANISA","pin":"9422"},{"legajo":"66021","name":"ZORAT, JOAQUIN JOSE","pin":"7176"},{"legajo":"95557","name":"ZORAT, JONATAN FELIX","pin":"7782"}];
+const initial=[{"id": 1, "name": "PUERTA VIRGEN"}, {"id": 2, "name": "OFICINA VENTAS"}, {"id": 3, "name": "LLAVE CAJA FUERTE"}, {"id": 4, "name": "COMEDOR ZONA LIMPIA"}, {"id": 5, "name": "OFICINA SENASA"}, {"id": 6, "name": "MOLINO"}, {"id": 7, "name": "DEPOSITO LIMPIEZA"}, {"id": 8, "name": "OFICINA PRODUCCIÓN"}, {"id": 9, "name": "DEPOSITO INSUMOS"}, {"id": 10, "name": "DEPOSITO PLAGAS (M.I.P.)"}, {"id": 11, "name": "OFICINA CALIDAD"}, {"id": 12, "name": "COMEDOR ZONA SUCIA"}, {"id": 13, "name": "CONSULTORIO MEDICO"}, {"id": 14, "name": "VESTUARIO ZONA LIMPIA"}, {"id": 15, "name": "OFICINA ADMINISTRACIÓN"}, {"id": 16, "name": "PORTONES CICLO 2"}, {"id": 17, "name": "PORTON CHICO SALA DE MÁQUINAS"}, {"id": 18, "name": "TRAFOR MOLINO"}, {"id": 19, "name": "PORTERÍA"}, {"id": 20, "name": "TERCERIZADO LOPEZ DARIO"}, {"id": 21, "name": "COCINA OFICINA"}, {"id": 22, "name": "SYESA GAS PUERTA INTERNA"}, {"id": 23, "name": "ROPA VISITAS"}, {"id": 24, "name": "INSUMO PRODUCCIÓN"}, {"id": 25, "name": "MOLINETE ENTRA Y SALIDA"}, {"id": 26, "name": "DEPOSITO CARTÓN"}, {"id": 27, "name": "CALDERA VIEJA"}];
+const STORAGE_KEYS='llavesPrueba',STORAGE_HISTORY='historialLlaves';
+function loadData(){let saved=null;try{saved=JSON.parse(localStorage.getItem(STORAGE_KEYS)||'null')}catch(e){}
+const base=saved&&Array.isArray(saved)&&saved.length?saved:initial.map(k=>({...k,status:'available',responsible:null,retiredAt:null}));
+const byId=new Map(base.map(k=>[Number(k.id),k]));initial.forEach(k=>{if(!byId.has(k.id))byId.set(k.id,{...k,status:'available',responsible:null,retiredAt:null})});return [...byId.values()].sort((a,b)=>Number(a.id)-Number(b.id));}
+let data=loadData(),history=[];try{history=JSON.parse(localStorage.getItem(STORAGE_HISTORY)||'[]');if(!Array.isArray(history))history=[]}catch(e){history=[]}
+let currentUser='',scanner=null,scanning=false,selectedKeyId=null;const $=id=>document.getElementById(id);
+function save(){try{localStorage.setItem(STORAGE_KEYS,JSON.stringify(data));localStorage.setItem(STORAGE_HISTORY,JSON.stringify(history))}catch(e){alert('No se pudieron guardar los datos en este navegador.')}}
+function now(){return new Date().toLocaleString('es-AR',{dateStyle:'short',timeStyle:'short'})}
+function codeFor(id){return 'LLAVE-'+String(id).padStart(3,'0')}
+function safe(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function enter(){const leg=$('legajoInput').value.trim(),pin=$('pinInput').value.trim();const employee=employees.find(e=>e.legajo===leg&&e.pin===pin);
+if(!employee){$('loginMsg').textContent='Legajo o PIN incorrecto. Revisá los datos e intentá nuevamente.';return}
+currentUser=employee.name+' (Legajo '+employee.legajo+')';$('user').textContent=employee.name;$('loginMsg').textContent='';$('login').classList.add('hidden');$('app').classList.remove('hidden');
+$('keySelect').innerHTML=data.map(k=>`<option value="${k.id}">${codeFor(k.id)} — ${safe(k.name)}</option>`).join('');render();}
+function findKeyFromQr(decoded){const value=String(decoded||'').trim().toUpperCase();let m=value.match(/LLAVE[\s_-]*0*(\d{1,3})/i);if(!m&&/^\d{1,3}$/.test(value))m=[value,value];if(!m)return null;const id=Number(m[1]);return data.find(k=>Number(k.id)===id)||null;}
+function showKey(id){const k=data.find(x=>Number(x.id)===Number(id));if(!k)return;selectedKeyId=k.id;$('keySelect').value=String(k.id);const card=$('keyCard');card.classList.remove('hidden');const available=k.status==='available';
+card.innerHTML=`<h2>🔑 ${codeFor(k.id)}</h2><h3>${safe(k.name)}</h3><p><span class="status ${available?'ok':'out'}">${available?'🟢 DISPONIBLE':'🔴 RETIRADA'}</span></p>
+${available?`<button data-action="retire" data-id="${k.id}">RETIRAR LLAVE</button>`:`<p><b>Retiró originalmente:</b> ${safe(k.responsible||'No registrado')}<br><b>Fecha/hora del retiro:</b> ${safe(k.retiredAt||'No registrada')}</p><button class="danger" data-action="return" data-id="${k.id}">DEVOLVER LLAVE</button>`}`;
+card.querySelector('button[data-action]').addEventListener('click',e=>{const id=Number(e.currentTarget.dataset.id);if(e.currentTarget.dataset.action==='retire')retire(id);else devolver(id);});}
+function scanManual(){showKey(Number($('keySelect').value))}
+function retire(id){const k=data.find(x=>Number(x.id)===Number(id));if(!k)return;if(k.status!=='available'){alert('Esta llave ya figura como retirada.');showKey(id);return}
+const t=now();k.status='taken';k.responsible=currentUser;k.retiredAt=t;history.unshift({key:k.name,keyId:k.id,code:codeFor(k.id),type:'RETIRO',retiro:currentUser,fecha:t});save();render();showKey(id);alert('Retiro registrado. Responsable: '+currentUser);}
+function devolver(id){const k=data.find(x=>Number(x.id)===Number(id));if(!k)return;if(k.status==='available'){alert('Esta llave ya figura como disponible.');showKey(id);return}
+const t=now(),original=k.responsible;history.unshift({key:k.name,keyId:k.id,code:codeFor(k.id),type:'DEVOLUCIÓN',retiro:original,devuelve:currentUser,fecha:t});k.status='available';k.responsible=null;k.retiredAt=null;save();render();showKey(id);alert('Devolución registrada.\nRetiró: '+(original||'No registrado')+'\nDevolvió: '+currentUser);}
+function render(){$('state').innerHTML=data.map(k=>`<tr><td>${codeFor(k.id)}</td><td>${safe(k.name)}</td><td>${k.status==='available'?'🟢 Disponible':'🔴 Retirada'}</td><td>${safe(k.responsible||'—')}</td></tr>`).join('');
+$('history').innerHTML=history.length?history.map(x=>`<div class="history-item"><b>${safe(x.key||'Llave')}</b> <span class="tag">${safe(x.type||'MOVIMIENTO')}</span><br><span class="small">${safe(x.code||'')}</span><br>${x.type==='RETIRO'?`Retiró: ${safe(x.retiro||'—')}`:`Retiró: ${safe(x.retiro||'—')} · Devolvió: ${safe(x.devuelve||'—')}`}<br><span class="small">${safe(x.fecha||'')}</span></div>`).join(''):'Todavía no hay movimientos.';}
+async function startScan(){$('scanMessage').textContent='';if(!window.Html5Qrcode){$('scanMessage').textContent='No se pudo cargar el lector QR. Comprobá internet y recargá.';return}
+if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$('scanMessage').textContent='Este navegador no permite cámara. Abrí la página por HTTPS.';return}
+$('reader').classList.remove('hidden');$('startScan').classList.add('hidden');$('stopScan').classList.remove('hidden');try{scanner=new Html5Qrcode('reader');scanning=true;await scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:230,height:230}},async decoded=>{if(!scanning)return;const k=findKeyFromQr(decoded);if(k){$('scanMessage').textContent='QR leído: '+codeFor(k.id)+' — '+k.name;await stopScan();showKey(k.id)}else{$('scanMessage').textContent='QR leído, pero no corresponde a una llave registrada.'}},()=>{});}
+catch(err){scanning=false;$('reader').classList.add('hidden');$('startScan').classList.remove('hidden');$('stopScan').classList.add('hidden');$('scanMessage').textContent='No se pudo abrir cámara. Revisá permisos y HTTPS. '+(err?.message||err);}}
+async function stopScan(){scanning=false;if(scanner){try{if(scanner.isScanning)await scanner.stop();scanner.clear()}catch(e){}scanner=null}$('reader').classList.add('hidden');$('startScan').classList.remove('hidden');$('stopScan').classList.add('hidden');}
+function exportCsv(){const rows=[['Codigo','Llave','Movimiento','Retiro por','Devolvio','Fecha y hora']];history.slice().reverse().forEach(x=>rows.push([x.code||codeFor(x.keyId||''),x.key||'',x.type||'',x.retiro||'',x.devuelve||'',x.fecha||'']));const csv='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='historial-control-llaves.csv';a.click();URL.revokeObjectURL(url);}
+$('enterBtn').addEventListener('click',enter);$('pinInput').addEventListener('keydown',e=>{if(e.key==='Enter')enter()});$('legajoInput').addEventListener('keydown',e=>{if(e.key==='Enter')$('pinInput').focus()});$('startScan').addEventListener('click',startScan);$('stopScan').addEventListener('click',stopScan);$('manualSelect').addEventListener('click',scanManual);
+$('changeUser').addEventListener('click',async()=>{await stopScan();$('app').classList.add('hidden');$('login').classList.remove('hidden');$('keyCard').classList.add('hidden');$('pinInput').value='';$('legajoInput').value=''});
+$('exportCsv').addEventListener('click',exportCsv);window.addEventListener('pagehide',()=>{if(scanner&&scanning)scanner.stop().catch(()=>{})});</script></body></html>
